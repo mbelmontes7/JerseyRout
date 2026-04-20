@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <radialGradient id="ball" cx="32%" cy="24%" r="78%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="58%" stop-color="#f8fafc"/>
+      <stop offset="100%" stop-color="#94a3b8"/>
+    </radialGradient>
+  </defs>
+  <circle cx="32" cy="32" r="30" fill="url(#ball)"/>
+  <path d="M32 3a29 29 0 0 1 29 29M61 32a29 29 0 0 1-29 29M32 61A29 29 0 0 1 3 32M3 32A29 29 0 0 1 32 3" fill="none" stroke="#111827" stroke-width="2.5" stroke-linecap="round"/>
+  <polygon points="32,17 45,26 40,43 24,43 19,26" fill="#111827"/>
+  <polygon points="32,3 40,12 36,20 28,20 24,12" fill="#111827"/>
+  <polygon points="58,24 62,34 54,42 46,36 48,27" fill="#111827"/>
+  <polygon points="44,54 35,62 25,58 25,49 35,46" fill="#111827"/>
+  <polygon points="20,54 29,62 39,58 39,49 29,46" fill="#111827"/>
+  <polygon points="6,24 2,34 10,42 18,36 16,27" fill="#111827"/>
+  <path d="M24 12 19 26M40 12l5 14M45 26l13-2M40 43l4 11M24 43l-4 11M19 26 6 24M24 43 10 42M40 43l14-1M28 20l-9 6M36 20l9 6" fill="none" stroke="#111827" stroke-width="2.2" stroke-linecap="round"/>
+</svg>
