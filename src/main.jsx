@@ -454,6 +454,8 @@ function ChallengePage({ onBack })
   const [rollCount, setRollCount] = useState(0);
   const [players, setPlayers] = useState(loadSavedPlayers);
   const [newPlayerName, setNewPlayerName] = useState('');
+  const [targetScore, setTargetScore] = useState(5);
+  const [scoreWinner, setScoreWinner] = useState(null);
   const sideNumbers = useMemo(() =>
   {
     const current = challenge.number;
@@ -496,14 +498,32 @@ function ChallengePage({ onBack })
 
   function updatePlayerScore(id, amount)
   {
-    setPlayers((current) =>
-      current.map((player) => (player.id === id ? { ...player, score: Math.max(0, player.score + amount) } : player)),
-    );
+    setPlayers((current) => current.map((player) =>
+    {
+      if (player.id !== id) return player;
+
+      const nextScore = Math.max(0, player.score + amount);
+      if (amount > 0 && nextScore >= targetScore && player.score < targetScore)
+      {
+        setScoreWinner({ ...player, score: nextScore });
+        playWinSound();
+        playSpaghettiSound();
+      }
+
+      return { ...player, score: nextScore };
+    }));
   }
 
   function deletePlayer(id)
   {
     setPlayers((current) => current.filter((player) => player.id !== id));
+    if (scoreWinner?.id === id) setScoreWinner(null);
+  }
+
+  function resetScores()
+  {
+    setPlayers((current) => current.map((player) => ({ ...player, score: 0 })));
+    setScoreWinner(null);
   }
 
   function playerStatus(player)
@@ -540,6 +560,24 @@ function ChallengePage({ onBack })
 
   return (
     <main className={`challenge-page min-h-screen overflow-hidden text-white ${landed ? 'challenge-page-shake' : ''}`}>
+      <RibbonStorm active={Boolean(scoreWinner)} />
+      {scoreWinner ? (
+        <div className="fixed inset-0 z-[65] grid place-items-center bg-[#020617]/72 px-4 backdrop-blur-sm">
+          <div className="score-winner-card rounded-[8px] border border-[#f9df4a]/70 bg-[#052e16] p-6 text-center shadow-glow">
+            <Trophy className="mx-auto text-[#f9df4a]" size={58} />
+            <p className="mt-4 text-sm font-black uppercase tracking-[0.16em] text-[#f9df4a]">Target reached</p>
+            <h2 className="mt-2 text-4xl font-black">{scoreWinner.name} wins!</h2>
+            <p className="mt-2 text-white/75">{scoreWinner.score} points</p>
+            <button
+              className="mt-5 rounded-[8px] bg-[#f9df4a] px-5 py-3 font-black uppercase text-[#052e16] transition hover:translate-y-[-1px]"
+              onClick={() => setScoreWinner(null)}
+              type="button"
+            >
+              Keep playing
+            </button>
+          </div>
+        </div>
+      ) : null}
       <div className="absolute inset-0 challenge-field" aria-hidden="true" />
       <section className="relative mx-auto grid min-h-screen max-w-5xl place-items-center px-4 py-6">
         <div className="w-full">
@@ -593,15 +631,45 @@ function ChallengePage({ onBack })
 
             <aside className={`rounded-[8px] border border-white/20 bg-white/10 p-5 shadow-pitch backdrop-blur-md ${landed ? 'quote-card-glow' : ''}`}>
               <div className="rounded-[8px] bg-[#f9df4a] px-4 py-3 text-[#052e16]">
-                <p className="text-xs font-black uppercase tracking-[0.16em]">Number {challenge.number} of 20</p>
+                <p className="text-xs font-black uppercase tracking-[0.16em]">Juggle target</p>
+                <h2 className="mt-1 text-3xl font-black">{challenge.number} touches</h2>
               </div>
               <div className="mt-5 inline-flex rounded-[8px] border border-white/20 bg-[#020617]/35 px-4 py-2 text-sm font-black uppercase tracking-[0.12em] text-[#f9df4a]">
                 {challenge.tag}
               </div>
               <p className="mt-5 text-sm font-bold text-white/65">Quotes rolled: {rollCount}</p>
 
+              <div className="mt-5 rounded-[8px] border border-white/15 bg-[#020617]/30 p-4">
+                <h3 className="text-lg font-black">How to play</h3>
+                <p className="mt-2 text-sm font-bold leading-relaxed text-white/75">
+                  Roll the dice. The number is the juggling target. If the player reaches that many touches without dropping the ball, give them 1 point.
+                </p>
+                <p className="mt-2 text-sm font-bold leading-relaxed text-white/75">
+                  The target score below is the game target. First player to reach that many successful rounds wins.
+                </p>
+              </div>
+
               <div className="mt-6 border-t border-white/15 pt-5">
-                <h3 className="text-xl font-black">Player Scoreboard</h3>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <h3 className="text-xl font-black">Player Scoreboard</h3>
+                  <button
+                    className="rounded-[8px] border border-white/15 bg-white/10 px-3 py-2 text-xs font-black uppercase text-white/75 transition hover:border-[#f9df4a] hover:text-[#f9df4a]"
+                    onClick={resetScores}
+                    type="button"
+                  >
+                    Reset scores
+                  </button>
+                </div>
+                <label className="mt-4 grid gap-2 text-sm font-black uppercase tracking-[0.08em] text-white/70">
+                  Target score
+                  <input
+                    className="rounded-[8px] border border-white/15 bg-[#03150f] px-3 py-2 text-base font-black text-white outline-none transition focus:border-[#f9df4a]"
+                    min="1"
+                    onChange={(event) => setTargetScore(Math.max(1, Number(event.target.value)))}
+                    type="number"
+                    value={targetScore}
+                  />
+                </label>
                 <div className="mt-3 flex gap-2">
                   <input
                     className="min-w-0 flex-1 rounded-[8px] border border-white/15 bg-[#03150f] px-3 py-2 text-sm font-bold outline-none transition focus:border-[#f9df4a]"
