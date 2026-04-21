@@ -1,6 +1,13 @@
 # Futbol Magaly
 
-Futbol Magaly is a soccer game-day and training web app built with React, Vite, and Tailwind CSS.
+Futbol Magaly is a soccer game-day and training web app built with React, Vite, and Tailwind CSS. ❤️
+
+## Technical Overview
+
+ It uses Tailwind CSS for styling, localStorage for saving data in the browser, and Firebase Hosting for deployment.
+
+The app saves jerseys, players, and scores locally on the user's device. Image uploads and cropping are handled in the browser, and sound effects are created using browser audio features.
+
 
 The app includes a jersey roulette picker, a juggling dice game with scoreboard, and an interactive soccer field challenge page. <img width="1667" height="997" alt="Screenshot 2026-04-21 at 5 39 04 PM" src="https://github.com/user-attachments/assets/b65fbb9e-db5b-4e5d-9e65-cdc85e208674" />
 
