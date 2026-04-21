@@ -272,6 +272,10 @@ input[type='range'] {
   position: relative;
 }
 
+.challenge-page-shake {
+  animation: screenShake 260ms ease-out;
+}
+
 .challenge-field {
   background:
     radial-gradient(circle at 22% 18%, rgba(249, 223, 74, 0.18), transparent 22%),
@@ -313,6 +317,19 @@ input[type='range'] {
 
 .challenge-dice-rolling {
   animation: diceRoll 280ms cubic-bezier(0.08, 0.84, 0.12, 1) both;
+}
+
+.challenge-dice-landed {
+  animation: diceImpact 360ms ease-out both;
+}
+
+.dice-number-glow {
+  animation: numberGlow 760ms ease-out both;
+  display: inline-block;
+}
+
+.quote-card-glow {
+  animation: quoteGlow 760ms ease-out both;
 }
 
 .dice-face {
@@ -554,6 +571,88 @@ input[type='range'] {
 
   100% {
     transform: translateY(0) rotateX(1080deg) rotateY(1120deg) rotateZ(0deg) scale(1);
+  }
+}
+
+@keyframes screenShake {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+
+  20% {
+    transform: translate3d(-8px, 3px, 0);
+  }
+
+  40% {
+    transform: translate3d(7px, -2px, 0);
+  }
+
+  60% {
+    transform: translate3d(-5px, 1px, 0);
+  }
+
+  80% {
+    transform: translate3d(3px, 0, 0);
+  }
+}
+
+@keyframes diceImpact {
+  0% {
+    transform: translateY(0) rotateX(1080deg) rotateY(1120deg) scale(1);
+  }
+
+  35% {
+    transform: translateY(8px) rotateX(1080deg) rotateY(1120deg) scale(0.94);
+  }
+
+  70% {
+    transform: translateY(-5px) rotateX(1080deg) rotateY(1120deg) scale(1.03);
+  }
+
+  100% {
+    transform: translateY(0) rotateX(-18deg) rotateY(28deg) scale(1);
+  }
+}
+
+@keyframes numberGlow {
+  0% {
+    color: #052e16;
+    text-shadow: none;
+    transform: scale(0.9);
+  }
+
+  35% {
+    color: #ffffff;
+    text-shadow:
+      0 0 12px rgba(255, 255, 255, 0.95),
+      0 0 30px rgba(249, 223, 74, 0.95),
+      0 0 54px rgba(16, 185, 129, 0.7);
+    transform: scale(1.16);
+  }
+
+  100% {
+    color: #052e16;
+    text-shadow: 0 0 12px rgba(249, 223, 74, 0.5);
+    transform: scale(1);
+  }
+}
+
+@keyframes quoteGlow {
+  0% {
+    box-shadow: 0 24px 80px rgba(3, 28, 18, 0.22);
+  }
+
+  35% {
+    border-color: rgba(249, 223, 74, 0.82);
+    box-shadow:
+      0 0 0 1px rgba(249, 223, 74, 0.75),
+      0 0 36px rgba(249, 223, 74, 0.38),
+      0 24px 80px rgba(3, 28, 18, 0.32);
+  }
+
+  100% {
+    box-shadow: 0 24px 80px rgba(3, 28, 18, 0.22);
   }
 }
 

@@ -11,6 +11,7 @@ const sampleJerseys = [
 
 const fanColors = ['#00A859', '#F7D117', '#0057B8', '#E11D48', '#FFFFFF', '#111827'];
 const STORAGE_KEY = 'soccer-jersey-roulette:kits';
+const SCOREBOARD_STORAGE_KEY = 'soccer-dice-scoreboard:players';
 const SPIN_DURATION = 5200;
 const challengeOptions = [
   { number: 1, title: 'First touch first', detail: 'Great players make the next play easier with the first touch.', tag: 'Control' },
@@ -49,6 +50,18 @@ function loadSavedJerseys()
   } catch
   {
     return sampleJerseys;
+  }
+}
+
+function loadSavedPlayers()
+{
+  try
+  {
+    const saved = window.localStorage.getItem(SCOREBOARD_STORAGE_KEY);
+    return saved ? JSON.parse(saved) : [];
+  } catch
+  {
+    return [];
   }
 }
 
@@ -190,6 +203,36 @@ function playSpaghettiSound()
   }
 
   setTimeout(() => ctx.close(), 1900);
+}
+
+function playDiceLandingSound()
+{
+  const AudioContext = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContext) return;
+
+  const ctx = new AudioContext();
+  const master = ctx.createGain();
+  master.gain.value = 0.2;
+  master.connect(ctx.destination);
+
+  [140, 92].forEach((freq, index) =>
+  {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    const start = ctx.currentTime + index * 0.055;
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(freq, start);
+    osc.frequency.exponentialRampToValueAtTime(freq * 0.55, start + 0.08);
+    gain.gain.setValueAtTime(0.001, start);
+    gain.gain.exponentialRampToValueAtTime(0.8, start + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.001, start + 0.13);
+    osc.connect(gain);
+    gain.connect(master);
+    osc.start(start);
+    osc.stop(start + 0.15);
+  });
+
+  setTimeout(() => ctx.close(), 500);
 }
 
 function RibbonStorm({ active })
@@ -407,7 +450,10 @@ function ChallengePage({ onBack })
 {
   const [challenge, setChallenge] = useState(challengeOptions[0]);
   const [rolling, setRolling] = useState(false);
+  const [landed, setLanded] = useState(false);
   const [rollCount, setRollCount] = useState(0);
+  const [players, setPlayers] = useState(loadSavedPlayers);
+  const [newPlayerName, setNewPlayerName] = useState('');
   const sideNumbers = useMemo(() =>
   {
     const current = challenge.number;
@@ -420,12 +466,60 @@ function ChallengePage({ onBack })
       ((current + 4) % 20) + 1,
     ];
   }, [challenge.number]);
+  const topScore = players.length ? Math.max(...players.map((player) => player.score)) : 0;
+  const lowScore = players.length ? Math.min(...players.map((player) => player.score)) : 0;
+
+  useEffect(() =>
+  {
+    try
+    {
+      window.localStorage.setItem(SCOREBOARD_STORAGE_KEY, JSON.stringify(players));
+    } catch
+    {
+      // If browser storage is unavailable, the scoreboard still works until refresh.
+    }
+  }, [players]);
+
+  function addPlayer()
+  {
+    const name = newPlayerName.trim();
+    if (!name) return;
+
+    setPlayers((current) => [...current, { id: makeId(), name, score: 0 }]);
+    setNewPlayerName('');
+  }
+
+  function updatePlayerName(id, name)
+  {
+    setPlayers((current) => current.map((player) => (player.id === id ? { ...player, name } : player)));
+  }
+
+  function updatePlayerScore(id, amount)
+  {
+    setPlayers((current) =>
+      current.map((player) => (player.id === id ? { ...player, score: Math.max(0, player.score + amount) } : player)),
+    );
+  }
+
+  function deletePlayer(id)
+  {
+    setPlayers((current) => current.filter((player) => player.id !== id));
+  }
+
+  function playerStatus(player)
+  {
+    if (players.length < 2) return 'Ready';
+    if (player.score === topScore && topScore !== lowScore) return 'Winning';
+    if (player.score === lowScore && topScore !== lowScore) return 'Needs comeback';
+    return 'In the game';
+  }
 
   function rollChallenge()
   {
     if (rolling) return;
 
     setRolling(true);
+    setLanded(false);
     setRollCount((count) => count + 1);
 
     const ticker = window.setInterval(() =>
@@ -438,11 +532,14 @@ function ChallengePage({ onBack })
       window.clearInterval(ticker);
       setChallenge(challengeOptions[Math.floor(Math.random() * challengeOptions.length)]);
       setRolling(false);
+      setLanded(true);
+      playDiceLandingSound();
+      window.setTimeout(() => setLanded(false), 760);
     }, 320);
   }
 
   return (
-    <main className="challenge-page min-h-screen overflow-hidden text-white">
+    <main className={`challenge-page min-h-screen overflow-hidden text-white ${landed ? 'challenge-page-shake' : ''}`}>
       <div className="absolute inset-0 challenge-field" aria-hidden="true" />
       <section className="relative mx-auto grid min-h-screen max-w-5xl place-items-center px-4 py-6">
         <div className="w-full">
@@ -458,12 +555,12 @@ function ChallengePage({ onBack })
           <div className="grid gap-5 lg:grid-cols-[1fr_340px]">
             <div className="rounded-[8px] border border-white/20 bg-[#061f16]/82 p-5 shadow-pitch backdrop-blur-md sm:p-7">
               <p className="text-sm font-black uppercase tracking-[0.16em] text-[#f9df4a]">Digital 1-20 dice</p>
-              <h1 className="mt-2 text-4xl font-black leading-tight sm:text-2xl">Soccer dice</h1>
+              <h1 className="mt-2 text-4xl font-black leading-tight sm:text-2xl">Challege dice</h1>
 
               <div className="mt-8 grid place-items-center">
-                <div className={`challenge-dice ${rolling ? 'challenge-dice-rolling' : ''}`}>
+                <div className={`challenge-dice ${rolling ? 'challenge-dice-rolling' : ''} ${landed ? 'challenge-dice-landed' : ''}`}>
                   <div className="dice-face dice-front">
-                    <span>{sideNumbers[0]}</span>
+                    <span className={landed ? 'dice-number-glow' : ''}>{sideNumbers[0]}</span>
                   </div>
                   <div className="dice-face dice-back">
                     <span>{sideNumbers[1]}</span>
@@ -494,16 +591,91 @@ function ChallengePage({ onBack })
               </button>
             </div>
 
-            <aside className="rounded-[8px] border border-white/20 bg-white/10 p-5 shadow-pitch backdrop-blur-md">
+            <aside className={`rounded-[8px] border border-white/20 bg-white/10 p-5 shadow-pitch backdrop-blur-md ${landed ? 'quote-card-glow' : ''}`}>
               <div className="rounded-[8px] bg-[#f9df4a] px-4 py-3 text-[#052e16]">
                 <p className="text-xs font-black uppercase tracking-[0.16em]">Number {challenge.number} of 20</p>
-                <h2 className="mt-1 text-2xl font-black">{challenge.title}</h2>
               </div>
-              <p className="mt-5 text-lg font-bold leading-relaxed">{challenge.detail}</p>
               <div className="mt-5 inline-flex rounded-[8px] border border-white/20 bg-[#020617]/35 px-4 py-2 text-sm font-black uppercase tracking-[0.12em] text-[#f9df4a]">
                 {challenge.tag}
               </div>
               <p className="mt-5 text-sm font-bold text-white/65">Quotes rolled: {rollCount}</p>
+
+              <div className="mt-6 border-t border-white/15 pt-5">
+                <h3 className="text-xl font-black">Player Scoreboard</h3>
+                <div className="mt-3 flex gap-2">
+                  <input
+                    className="min-w-0 flex-1 rounded-[8px] border border-white/15 bg-[#03150f] px-3 py-2 text-sm font-bold outline-none transition focus:border-[#f9df4a]"
+                    onChange={(event) => setNewPlayerName(event.target.value)}
+                    onKeyDown={(event) =>
+                    {
+                      if (event.key === 'Enter') addPlayer();
+                    }}
+                    placeholder="Player name"
+                    value={newPlayerName}
+                  />
+                  <button
+                    className="rounded-[8px] bg-[#f9df4a] px-4 py-2 text-sm font-black uppercase text-[#052e16] transition hover:translate-y-[-1px]"
+                    onClick={addPlayer}
+                    type="button"
+                  >
+                    Add
+                  </button>
+                </div>
+
+                <div className="mt-4 grid gap-3">
+                  {players.length === 0 ? (
+                    <p className="rounded-[8px] border border-white/15 bg-[#020617]/25 px-3 py-3 text-sm font-bold text-white/65">
+                      Add players to track points while you roll.
+                    </p>
+                  ) : (
+                    players
+                      .slice()
+                      .sort((a, b) => b.score - a.score)
+                      .map((player) => (
+                        <article className="rounded-[8px] border border-white/15 bg-[#020617]/30 p-3" key={player.id}>
+                          <div className="flex items-center gap-2">
+                            <input
+                              aria-label="Player name"
+                              className="min-w-0 flex-1 rounded-[8px] border border-white/10 bg-[#03150f] px-3 py-2 text-sm font-black outline-none transition focus:border-[#f9df4a]"
+                              onChange={(event) => updatePlayerName(player.id, event.target.value)}
+                              value={player.name}
+                            />
+                            <button
+                              aria-label={`Delete ${player.name}`}
+                              className="grid h-10 w-10 place-items-center rounded-[8px] border border-white/15 text-white/70 transition hover:border-[#e11d48] hover:bg-[#e11d48] hover:text-white"
+                              onClick={() => deletePlayer(player.id)}
+                              type="button"
+                            >
+                              <Trash2 size={17} />
+                            </button>
+                          </div>
+                          <div className="mt-3 flex items-center gap-2">
+                            <button
+                              className="grid h-9 w-9 place-items-center rounded-[8px] border border-white/15 bg-white/10 text-lg font-black transition hover:border-[#f9df4a] hover:text-[#f9df4a]"
+                              onClick={() => updatePlayerScore(player.id, -1)}
+                              type="button"
+                            >
+                              -
+                            </button>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-2xl font-black">{player.score} points</p>
+                              <p className={`text-xs font-black uppercase tracking-[0.12em] ${playerStatus(player) === 'Winning' ? 'text-[#f9df4a]' : playerStatus(player) === 'Needs comeback' ? 'text-[#fb7185]' : 'text-white/60'}`}>
+                                {playerStatus(player)}
+                              </p>
+                            </div>
+                            <button
+                              className="grid h-9 w-9 place-items-center rounded-[8px] border border-white/15 bg-white/10 text-lg font-black transition hover:border-[#f9df4a] hover:text-[#f9df4a]"
+                              onClick={() => updatePlayerScore(player.id, 1)}
+                              type="button"
+                            >
+                              +
+                            </button>
+                          </div>
+                        </article>
+                      ))
+                  )}
+                </div>
+              </div>
             </aside>
           </div>
         </div>
