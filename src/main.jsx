@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Check, ImagePlus, Loader2, Music2, RotateCcw, Sparkles, Trash2, Trophy, X, Volume2 } from 'lucide-react';
+import { ArrowLeft, Check, Dice5, ImagePlus, Loader2, Music2, RotateCcw, Sparkles, Trash2, Trophy, X, Volume2 } from 'lucide-react';
 import './styles.css';
 
 const sampleJerseys = [
@@ -12,6 +12,28 @@ const sampleJerseys = [
 const fanColors = ['#00A859', '#F7D117', '#0057B8', '#E11D48', '#FFFFFF', '#111827'];
 const STORAGE_KEY = 'soccer-jersey-roulette:kits';
 const SPIN_DURATION = 5200;
+const challengeOptions = [
+  { number: 1, title: 'First touch first', detail: 'Great players make the next play easier with the first touch.', tag: 'Control' },
+  { number: 2, title: 'Keep showing up', detail: 'Every touch on the ball is a small vote for the player you are becoming.', tag: 'Mindset' },
+  { number: 3, title: 'Play brave', detail: 'Mistakes are proof that you are trying skills that can make you better.', tag: 'Confidence' },
+  { number: 4, title: 'Fast feet, calm head', detail: 'The ball moves better when your mind stays quiet.', tag: 'Focus' },
+  { number: 5, title: 'Win the little moments', detail: 'One clean touch, one quick turn, one smart pass. That is how games change.', tag: 'Discipline' },
+  { number: 6, title: 'Train your rhythm', detail: 'When your feet find rhythm, the ball starts to feel lighter.', tag: 'Flow' },
+  { number: 7, title: 'Trust the work', detail: 'The player you want to be is built when nobody is watching.', tag: 'Work' },
+  { number: 8, title: 'Play with joy', detail: 'The best soccer starts with loving the ball at your feet.', tag: 'Joy' },
+  { number: 9, title: 'Stay hungry', detail: 'Good is a checkpoint, not the finish line.', tag: 'Ambition' },
+  { number: 10, title: 'Own the ball', detail: 'Be patient, stay balanced, and make the ball listen.', tag: 'Skill' },
+  { number: 11, title: 'Reset and go', detail: 'Bad touch? Next touch. Keep playing.', tag: 'Resilience' },
+  { number: 12, title: 'Game day energy', detail: 'Bring effort first. The confidence follows.', tag: 'Energy' },
+  { number: 13, title: 'Pressure is a privilege', detail: 'Big moments are invitations to show your work.', tag: 'Courage' },
+  { number: 14, title: 'Simple wins', detail: 'A clean pass at the right time can be more powerful than a flashy move.', tag: 'IQ' },
+  { number: 15, title: 'Move again', detail: 'After every pass, move. Soccer rewards players who stay available.', tag: 'Movement' },
+  { number: 16, title: 'Be hard to stop', detail: 'Balance, effort, and belief make you difficult to play against.', tag: 'Strength' },
+  { number: 17, title: 'See the field', detail: 'Lift your head, scan early, and the game slows down.', tag: 'Vision' },
+  { number: 18, title: 'Earn confidence', detail: 'Confidence comes from doing the small work again and again.', tag: 'Growth' },
+  { number: 19, title: 'Play for the next touch', detail: 'The last touch is gone. The next one is yours.', tag: 'Reset' },
+  { number: 20, title: 'Bring the fire', detail: 'Play with heart, run with purpose, and leave no lazy touch behind.', tag: 'Passion' },
+];
 
 function makeId()
 {
@@ -381,8 +403,118 @@ function CropEditor({ draft, crop, onCancel, onCropChange, onSave })
   );
 }
 
+function ChallengePage({ onBack })
+{
+  const [challenge, setChallenge] = useState(challengeOptions[0]);
+  const [rolling, setRolling] = useState(false);
+  const [rollCount, setRollCount] = useState(0);
+  const sideNumbers = useMemo(() =>
+  {
+    const current = challenge.number;
+    return [
+      current,
+      (current % 20) + 1,
+      ((current + 1) % 20) + 1,
+      ((current + 2) % 20) + 1,
+      ((current + 3) % 20) + 1,
+      ((current + 4) % 20) + 1,
+    ];
+  }, [challenge.number]);
+
+  function rollChallenge()
+  {
+    if (rolling) return;
+
+    setRolling(true);
+    setRollCount((count) => count + 1);
+
+    const ticker = window.setInterval(() =>
+    {
+      setChallenge(challengeOptions[Math.floor(Math.random() * challengeOptions.length)]);
+    }, 18);
+
+    window.setTimeout(() =>
+    {
+      window.clearInterval(ticker);
+      setChallenge(challengeOptions[Math.floor(Math.random() * challengeOptions.length)]);
+      setRolling(false);
+    }, 320);
+  }
+
+  return (
+    <main className="challenge-page min-h-screen overflow-hidden text-white">
+      <div className="absolute inset-0 challenge-field" aria-hidden="true" />
+      <section className="relative mx-auto grid min-h-screen max-w-5xl place-items-center px-4 py-6">
+        <div className="w-full">
+          <button
+            className="mb-5 inline-flex items-center gap-2 rounded-[8px] border border-white/20 bg-white/10 px-4 py-3 font-black text-white backdrop-blur-md transition hover:border-[#f9df4a] hover:text-[#f9df4a]"
+            onClick={onBack}
+            type="button"
+          >
+            <ArrowLeft size={20} />
+            Jersey Roulette
+          </button>
+
+          <div className="grid gap-5 lg:grid-cols-[1fr_340px]">
+            <div className="rounded-[8px] border border-white/20 bg-[#061f16]/82 p-5 shadow-pitch backdrop-blur-md sm:p-7">
+              <p className="text-sm font-black uppercase tracking-[0.16em] text-[#f9df4a]">Digital 1-20 dice</p>
+              <h1 className="mt-2 text-4xl font-black leading-tight sm:text-2xl">Soccer dice</h1>
+
+              <div className="mt-8 grid place-items-center">
+                <div className={`challenge-dice ${rolling ? 'challenge-dice-rolling' : ''}`}>
+                  <div className="dice-face dice-front">
+                    <span>{sideNumbers[0]}</span>
+                  </div>
+                  <div className="dice-face dice-back">
+                    <span>{sideNumbers[1]}</span>
+                  </div>
+                  <div className="dice-face dice-right">
+                    <span>{sideNumbers[2]}</span>
+                  </div>
+                  <div className="dice-face dice-left">
+                    <span>{sideNumbers[3]}</span>
+                  </div>
+                  <div className="dice-face dice-top">
+                    <span>{sideNumbers[4]}</span>
+                  </div>
+                  <div className="dice-face dice-bottom">
+                    <span>{sideNumbers[5]}</span>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                className="mt-8 inline-flex w-full items-center justify-center gap-2 rounded-[8px] bg-[#f9df4a] px-6 py-4 text-lg font-black uppercase text-[#052e16] shadow-lg transition hover:translate-y-[-2px] disabled:opacity-70"
+                disabled={rolling}
+                onClick={rollChallenge}
+                type="button"
+              >
+                {rolling ? <Loader2 className="animate-spin" size={22} /> : <Dice5 size={22} />}
+                Roll number
+              </button>
+            </div>
+
+            <aside className="rounded-[8px] border border-white/20 bg-white/10 p-5 shadow-pitch backdrop-blur-md">
+              <div className="rounded-[8px] bg-[#f9df4a] px-4 py-3 text-[#052e16]">
+                <p className="text-xs font-black uppercase tracking-[0.16em]">Number {challenge.number} of 20</p>
+                <h2 className="mt-1 text-2xl font-black">{challenge.title}</h2>
+              </div>
+              <p className="mt-5 text-lg font-bold leading-relaxed">{challenge.detail}</p>
+              <div className="mt-5 inline-flex rounded-[8px] border border-white/20 bg-[#020617]/35 px-4 py-2 text-sm font-black uppercase tracking-[0.12em] text-[#f9df4a]">
+                {challenge.tag}
+              </div>
+              <p className="mt-5 text-sm font-bold text-white/65">Quotes rolled: {rollCount}</p>
+            </aside>
+          </div>
+        </div>
+      </section>
+    </main>
+  );
+}
+
 function App()
 {
+  const [route, setRoute] = useState(() => window.location.pathname);
   const [jerseys, setJerseys] = useState(loadSavedJerseys);
   const [winner, setWinner] = useState(null);
   const [showReveal, setShowReveal] = useState(false);
@@ -398,6 +530,23 @@ function App()
   const audioRef = useRef(null);
   const fileInputRef = useRef(null);
   const musicInputRef = useRef(null);
+
+  useEffect(() =>
+  {
+    function handlePopState()
+    {
+      setRoute(window.location.pathname);
+    }
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  function navigate(path)
+  {
+    window.history.pushState({}, '', path);
+    setRoute(path);
+  }
 
   useEffect(() =>
   {
@@ -572,6 +721,11 @@ function App()
     }, SPIN_DURATION);
   }
 
+  if (route === '/juggling-challenges')
+  {
+    return <ChallengePage onBack={() => navigate('/')} />;
+  }
+
   return (
     <main className="min-h-screen overflow-hidden bg-[#07823a] text-white">
       <audio ref={audioRef} src={musicUrl} />
@@ -593,15 +747,25 @@ function App()
                 <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#f9df4a]">Mmmh.. What jersey to wear?</p>
                 <h1 className="text-3xl font-black leading-tight sm:text-5xl">Jersey Roulette</h1>
               </div>
-              <button
-                aria-label={soundOn ? 'Turn sound off' : 'Turn sound on'}
-                className={`inline-flex h-11 w-11 items-center justify-center rounded-[8px] border transition ${soundOn ? 'border-[#f9df4a] bg-[#f9df4a] text-[#052e16]' : 'border-white/25 bg-white/10 text-white'
-                  }`}
-                onClick={() => setSoundOn((value) => !value)}
-                type="button"
-              >
-                <Volume2 size={20} />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-[8px] border border-white/25 bg-white/10 px-4 text-sm font-black uppercase text-white transition hover:border-[#f9df4a] hover:text-[#f9df4a]"
+                  onClick={() => navigate('/juggling-challenges')}
+                  type="button"
+                >
+                  <Dice5 size={18} />
+                  Challenges
+                </button>
+                <button
+                  aria-label={soundOn ? 'Turn sound off' : 'Turn sound on'}
+                  className={`inline-flex h-11 w-11 items-center justify-center rounded-[8px] border transition ${soundOn ? 'border-[#f9df4a] bg-[#f9df4a] text-[#052e16]' : 'border-white/25 bg-white/10 text-white'
+                    }`}
+                  onClick={() => setSoundOn((value) => !value)}
+                  type="button"
+                >
+                  <Volume2 size={20} />
+                </button>
+              </div>
             </header>
 
             <div className="grid flex-1 place-items-center py-6">
