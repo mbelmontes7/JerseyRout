@@ -12,6 +12,7 @@ const sampleJerseys = [
 const fanColors = ['#00A859', '#F7D117', '#0057B8', '#E11D48', '#FFFFFF', '#111827'];
 const STORAGE_KEY = 'soccer-jersey-roulette:kits';
 const SCOREBOARD_STORAGE_KEY = 'soccer-dice-scoreboard:players';
+const FIELD_SCOREBOARD_STORAGE_KEY = 'soccer-field-scoreboard:players';
 const SPIN_DURATION = 5200;
 const challengeOptions = [
   { number: 1, title: 'First touch first', detail: 'Great players make the next play easier with the first touch.', tag: 'Control' },
@@ -36,6 +37,57 @@ const challengeOptions = [
   { number: 20, title: 'Bring the fire', detail: 'Play with heart, run with purpose, and leave no lazy touch behind.', tag: 'Passion' },
 ];
 
+const fieldChallengeOptions = [
+  {
+    id: 'crossbar',
+    name: 'Crossbar Challenge',
+    spot: 'Top box',
+    detail: 'Place the ball outside the box. Take 5 shots and try to hit the crossbar. Score 1 point for every hit.',
+    x: '50%',
+    y: '17%',
+  },
+  {
+    id: 'penalty',
+    name: 'Penalty Corners',
+    spot: 'Penalty spot',
+    detail: 'Take 6 penalty shots. Alternate aiming bottom left and bottom right. Score only clean corner shots.',
+    x: '50%',
+    y: '31%',
+  },
+  {
+    id: 'dribble',
+    name: 'Dribble Lane',
+    spot: 'Midfield',
+    detail: 'Set 5 cones in a line. Dribble through twice with control, then sprint back with the ball.',
+    x: '50%',
+    y: '52%',
+  },
+  {
+    id: 'corner',
+    name: 'Corner Target',
+    spot: 'Corner arc',
+    detail: 'From the corner, try to land 5 crosses into a target zone near the penalty spot.',
+    x: '16%',
+    y: '20%',
+  },
+  {
+    id: 'first-touch',
+    name: 'First Touch Box',
+    spot: 'Right channel',
+    detail: 'Pass against a wall or partner. First touch must stay inside a small square, then pass back clean.',
+    x: '78%',
+    y: '58%',
+  },
+  {
+    id: 'weak-foot',
+    name: 'Weak Foot Gate',
+    spot: 'Left channel',
+    detail: 'Create a small gate with cones. Pass through it 10 times using only your weaker foot.',
+    x: '22%',
+    y: '64%',
+  },
+];
+
 function makeId()
 {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -58,6 +110,18 @@ function loadSavedPlayers()
   try
   {
     const saved = window.localStorage.getItem(SCOREBOARD_STORAGE_KEY);
+    return saved ? JSON.parse(saved) : [];
+  } catch
+  {
+    return [];
+  }
+}
+
+function loadSavedFieldPlayers()
+{
+  try
+  {
+    const saved = window.localStorage.getItem(FIELD_SCOREBOARD_STORAGE_KEY);
     return saved ? JSON.parse(saved) : [];
   } catch
   {
@@ -752,6 +816,299 @@ function ChallengePage({ onBack })
   );
 }
 
+function FieldChallengesPage({ onBack })
+{
+  const [activeChallenge, setActiveChallenge] = useState(fieldChallengeOptions[0]);
+  const [completed, setCompleted] = useState([]);
+  const [picking, setPicking] = useState(false);
+  const [picked, setPicked] = useState(false);
+  const [players, setPlayers] = useState(loadSavedFieldPlayers);
+  const [newPlayerName, setNewPlayerName] = useState('');
+  const [targetScore, setTargetScore] = useState(5);
+  const [scoreWinner, setScoreWinner] = useState(null);
+  const topScore = players.length ? Math.max(...players.map((player) => player.score)) : 0;
+  const lowScore = players.length ? Math.min(...players.map((player) => player.score)) : 0;
+
+  useEffect(() =>
+  {
+    try
+    {
+      window.localStorage.setItem(FIELD_SCOREBOARD_STORAGE_KEY, JSON.stringify(players));
+    } catch
+    {
+      // If browser storage is unavailable, the field scoreboard still works until refresh.
+    }
+  }, [players]);
+
+  function pickRandomChallenge()
+  {
+    if (picking) return;
+
+    setPicking(true);
+    setPicked(false);
+    const ticker = window.setInterval(() =>
+    {
+      setActiveChallenge(fieldChallengeOptions[Math.floor(Math.random() * fieldChallengeOptions.length)]);
+    }, 70);
+
+    window.setTimeout(() =>
+    {
+      window.clearInterval(ticker);
+      setActiveChallenge(fieldChallengeOptions[Math.floor(Math.random() * fieldChallengeOptions.length)]);
+      setPicking(false);
+      setPicked(true);
+      playDiceLandingSound();
+      window.setTimeout(() => setPicked(false), 900);
+    }, 850);
+  }
+
+  function toggleComplete(id)
+  {
+    setCompleted((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
+  }
+
+  function addPlayer()
+  {
+    const name = newPlayerName.trim();
+    if (!name) return;
+
+    setPlayers((current) => [...current, { id: makeId(), name, score: 0 }]);
+    setNewPlayerName('');
+  }
+
+  function updatePlayerName(id, name)
+  {
+    setPlayers((current) => current.map((player) => (player.id === id ? { ...player, name } : player)));
+  }
+
+  function updatePlayerScore(id, amount)
+  {
+    setPlayers((current) => current.map((player) =>
+    {
+      if (player.id !== id) return player;
+
+      const nextScore = Math.max(0, player.score + amount);
+      if (amount > 0 && nextScore >= targetScore && player.score < targetScore)
+      {
+        setScoreWinner({ ...player, score: nextScore });
+        playWinSound();
+        playSpaghettiSound();
+      }
+
+      return { ...player, score: nextScore };
+    }));
+  }
+
+  function deletePlayer(id)
+  {
+    setPlayers((current) => current.filter((player) => player.id !== id));
+    if (scoreWinner?.id === id) setScoreWinner(null);
+  }
+
+  function resetScores()
+  {
+    setPlayers((current) => current.map((player) => ({ ...player, score: 0 })));
+    setScoreWinner(null);
+  }
+
+  function playerStatus(player)
+  {
+    if (players.length < 2) return 'Ready';
+    if (player.score === topScore && topScore !== lowScore) return 'Winning';
+    if (player.score === lowScore && topScore !== lowScore) return 'Needs comeback';
+    return 'In the game';
+  }
+
+  return (
+    <main className="field-challenge-page min-h-screen overflow-hidden text-white">
+      <RibbonStorm active={Boolean(scoreWinner)} />
+      {scoreWinner ? (
+        <div className="fixed inset-0 z-[65] grid place-items-center bg-[#020617]/72 px-4 backdrop-blur-sm">
+          <div className="score-winner-card rounded-[8px] border border-[#f9df4a]/70 bg-[#052e16] p-6 text-center shadow-glow">
+            <Trophy className="mx-auto text-[#f9df4a]" size={58} />
+            <p className="mt-4 text-sm font-black uppercase tracking-[0.16em] text-[#f9df4a]">Field target reached</p>
+            <h2 className="mt-2 text-4xl font-black">{scoreWinner.name} wins!</h2>
+            <p className="mt-2 text-white/75">{scoreWinner.score} points</p>
+            <button
+              className="mt-5 rounded-[8px] bg-[#f9df4a] px-5 py-3 font-black uppercase text-[#052e16] transition hover:translate-y-[-1px]"
+              onClick={() => setScoreWinner(null)}
+              type="button"
+            >
+              Keep playing
+            </button>
+          </div>
+        </div>
+      ) : null}
+      <div className="absolute inset-0 field-challenge-bg" aria-hidden="true" />
+      <section className="relative mx-auto min-h-screen max-w-6xl px-4 py-6">
+        <button
+          className="mb-5 inline-flex items-center gap-2 rounded-[8px] border border-white/20 bg-white/10 px-4 py-3 font-black text-white backdrop-blur-md transition hover:border-[#f9df4a] hover:text-[#f9df4a]"
+          onClick={onBack}
+          type="button"
+        >
+          <ArrowLeft size={20} />
+          Jersey Roulette
+        </button>
+
+        <div className="grid gap-5 lg:grid-cols-[1fr_360px]">
+          <div className="rounded-[8px] border border-white/20 bg-[#052e16]/78 p-4 shadow-pitch backdrop-blur-md sm:p-6">
+            <p className="text-sm font-black uppercase tracking-[0.16em] text-[#f9df4a]">Tap a field station</p>
+            <h1 className="mt-2 text-4xl font-black leading-tight sm:text-5xl">Soccer Field Challenges</h1>
+            <button
+              className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-[8px] bg-[#f9df4a] px-6 py-4 text-lg font-black uppercase text-[#052e16] shadow-lg transition hover:translate-y-[-2px] disabled:opacity-70"
+              disabled={picking}
+              onClick={pickRandomChallenge}
+              type="button"
+            >
+              {picking ? <Loader2 className="animate-spin" size={22} /> : <Sparkles size={22} />}
+              Random field challenge
+            </button>
+
+            <div className="soccer-field-board mt-6">
+              <div className="field-goal field-goal-top" />
+              <div className="field-goal field-goal-bottom" />
+              <div className="field-box field-box-top" />
+              <div className="field-box field-box-bottom" />
+              <div className="field-center-circle" />
+              <div className="field-half-line" />
+              {fieldChallengeOptions.map((challenge) => (
+                <button
+                  className={`field-station ${activeChallenge.id === challenge.id ? 'field-station-active' : ''} ${activeChallenge.id === challenge.id && picking ? 'field-station-picking' : ''} ${completed.includes(challenge.id) ? 'field-station-complete' : ''}`}
+                  key={challenge.id}
+                  onClick={() => setActiveChallenge(challenge)}
+                  style={{ left: challenge.x, top: challenge.y }}
+                  type="button"
+                >
+                  <span>{completed.includes(challenge.id) ? <Check size={18} /> : <Trophy size={18} />}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <aside className={`rounded-[8px] border border-white/20 bg-white/10 p-5 shadow-pitch backdrop-blur-md ${picked ? 'quote-card-glow' : ''}`}>
+            <div className="rounded-[8px] bg-[#f9df4a] px-4 py-3 text-[#052e16]">
+              <p className="text-xs font-black uppercase tracking-[0.16em]">{activeChallenge.spot}</p>
+              <h2 className="mt-1 text-2xl font-black">{activeChallenge.name}</h2>
+            </div>
+            <p className="mt-5 text-lg font-bold leading-relaxed">{activeChallenge.detail}</p>
+            <button
+              className={`mt-6 inline-flex w-full items-center justify-center gap-2 rounded-[8px] px-5 py-3 font-black uppercase transition hover:translate-y-[-1px] ${completed.includes(activeChallenge.id) ? 'bg-white text-[#052e16]' : 'bg-[#f9df4a] text-[#052e16]'}`}
+              onClick={() => toggleComplete(activeChallenge.id)}
+              type="button"
+            >
+              <Check size={20} />
+              {completed.includes(activeChallenge.id) ? 'Completed' : 'Mark complete'}
+            </button>
+            <div className="mt-5 rounded-[8px] border border-white/15 bg-[#020617]/30 p-4">
+              <p className="text-sm font-black uppercase tracking-[0.12em] text-[#f9df4a]">Progress</p>
+              <p className="mt-2 text-3xl font-black">
+                {completed.length}/{fieldChallengeOptions.length}
+              </p>
+              <p className="mt-1 text-sm font-bold text-white/65">field stations completed</p>
+            </div>
+
+            <div className="mt-6 border-t border-white/15 pt-5">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h3 className="text-xl font-black">Field Scoreboard</h3>
+                <button
+                  className="rounded-[8px] border border-white/15 bg-white/10 px-3 py-2 text-xs font-black uppercase text-white/75 transition hover:border-[#f9df4a] hover:text-[#f9df4a]"
+                  onClick={resetScores}
+                  type="button"
+                >
+                  Reset scores
+                </button>
+              </div>
+              <label className="mt-4 grid gap-2 text-sm font-black uppercase tracking-[0.08em] text-white/70">
+                Target score
+                <input
+                  className="rounded-[8px] border border-white/15 bg-[#03150f] px-3 py-2 text-base font-black text-white outline-none transition focus:border-[#f9df4a]"
+                  min="1"
+                  onChange={(event) => setTargetScore(Math.max(1, Number(event.target.value)))}
+                  type="number"
+                  value={targetScore}
+                />
+              </label>
+              <div className="mt-3 flex gap-2">
+                <input
+                  className="min-w-0 flex-1 rounded-[8px] border border-white/15 bg-[#03150f] px-3 py-2 text-sm font-bold outline-none transition focus:border-[#f9df4a]"
+                  onChange={(event) => setNewPlayerName(event.target.value)}
+                  onKeyDown={(event) =>
+                  {
+                    if (event.key === 'Enter') addPlayer();
+                  }}
+                  placeholder="Player name"
+                  value={newPlayerName}
+                />
+                <button
+                  className="rounded-[8px] bg-[#f9df4a] px-4 py-2 text-sm font-black uppercase text-[#052e16] transition hover:translate-y-[-1px]"
+                  onClick={addPlayer}
+                  type="button"
+                >
+                  Add
+                </button>
+              </div>
+
+              <div className="mt-4 grid gap-3">
+                {players.length === 0 ? (
+                  <p className="rounded-[8px] border border-white/15 bg-[#020617]/25 px-3 py-3 text-sm font-bold text-white/65">
+                    Add players to track field challenge points.
+                  </p>
+                ) : (
+                  players
+                    .slice()
+                    .sort((a, b) => b.score - a.score)
+                    .map((player) => (
+                      <article className="rounded-[8px] border border-white/15 bg-[#020617]/30 p-3" key={player.id}>
+                        <div className="flex items-center gap-2">
+                          <input
+                            aria-label="Player name"
+                            className="min-w-0 flex-1 rounded-[8px] border border-white/10 bg-[#03150f] px-3 py-2 text-sm font-black outline-none transition focus:border-[#f9df4a]"
+                            onChange={(event) => updatePlayerName(player.id, event.target.value)}
+                            value={player.name}
+                          />
+                          <button
+                            aria-label={`Delete ${player.name}`}
+                            className="grid h-10 w-10 place-items-center rounded-[8px] border border-white/15 text-white/70 transition hover:border-[#e11d48] hover:bg-[#e11d48] hover:text-white"
+                            onClick={() => deletePlayer(player.id)}
+                            type="button"
+                          >
+                            <Trash2 size={17} />
+                          </button>
+                        </div>
+                        <div className="mt-3 flex items-center gap-2">
+                          <button
+                            className="grid h-9 w-9 place-items-center rounded-[8px] border border-white/15 bg-white/10 text-lg font-black transition hover:border-[#f9df4a] hover:text-[#f9df4a]"
+                            onClick={() => updatePlayerScore(player.id, -1)}
+                            type="button"
+                          >
+                            -
+                          </button>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-2xl font-black">{player.score} points</p>
+                            <p className={`text-xs font-black uppercase tracking-[0.12em] ${playerStatus(player) === 'Winning' ? 'text-[#f9df4a]' : playerStatus(player) === 'Needs comeback' ? 'text-[#fb7185]' : 'text-white/60'}`}>
+                              {playerStatus(player)}
+                            </p>
+                          </div>
+                          <button
+                            className="grid h-9 w-9 place-items-center rounded-[8px] border border-white/15 bg-white/10 text-lg font-black transition hover:border-[#f9df4a] hover:text-[#f9df4a]"
+                            onClick={() => updatePlayerScore(player.id, 1)}
+                            type="button"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </article>
+                    ))
+                )}
+              </div>
+            </div>
+          </aside>
+        </div>
+      </section>
+    </main>
+  );
+}
+
 function App()
 {
   const [route, setRoute] = useState(() => window.location.pathname);
@@ -966,6 +1323,11 @@ function App()
     return <ChallengePage onBack={() => navigate('/')} />;
   }
 
+  if (route === '/field-challenges')
+  {
+    return <FieldChallengesPage onBack={() => navigate('/')} />;
+  }
+
   return (
     <main className="min-h-screen overflow-hidden bg-[#07823a] text-white">
       <audio ref={audioRef} src={musicUrl} />
@@ -994,7 +1356,15 @@ function App()
                   type="button"
                 >
                   <Dice5 size={18} />
-                  Challenges
+                  Dice Challege
+                </button>
+                <button
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-[8px] border border-white/25 bg-white/10 px-4 text-sm font-black uppercase text-white transition hover:border-[#f9df4a] hover:text-[#f9df4a]"
+                  onClick={() => navigate('/field-challenges')}
+                  type="button"
+                >
+                  <Trophy size={18} />
+                  Field
                 </button>
                 <button
                   aria-label={soundOn ? 'Turn sound off' : 'Turn sound on'}
